@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/core": "^8.5.0",
     "@google/generative-ai": "^0.24.1",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.21.3",
@@ -27,6 +28,8 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
     "@types/leaflet": "^1.9.21",
     "@vitejs/plugin-react": "4.0.0",
     "autoprefixer": "10.4.0",

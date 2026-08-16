@@ -60,7 +60,9 @@ export default function ChatPage() {
   useEffect(() => {
     if (step !== 'chat') return;
 
-    const socket = io('http://localhost:4000');
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+    const socketUrl = import.meta.env.PROD ? API_BASE_URL : 'http://localhost:4000';
+    const socket = io(socketUrl);
     socketRef.current = socket;
 
     socket.on('connect', () => {

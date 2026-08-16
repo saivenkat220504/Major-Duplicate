@@ -9,6 +9,23 @@ import { useDarkMode } from './shared/hooks/useDarkMode'
 import AuraModal from './features/ai-assistant/components/AuraModal'
 import { LanguageProvider } from './shared/context/LanguageContext'
 import TicketScanPage from './features/boarding-pass/pages/TicketScanPage'
+import axios from 'axios';
+
+// Centralize API configuration for production Android/Capacitor packaging
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
+// Only apply the full URL in production; keep using the Vite proxy in development
+if (import.meta.env.PROD) {
+  axios.defaults.baseURL = API_BASE_URL;
+  
+  const originalFetch = window.fetch;
+  window.fetch = async (input, init) => {
+    if (typeof input === 'string' && input.startsWith('/api')) {
+      input = API_BASE_URL + input;
+    }
+    return originalFetch(input, init);
+  };
+}
 
 function AppContent() {
   const [auraOpen, setAuraOpen] = useState(false)

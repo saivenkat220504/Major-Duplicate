@@ -21,6 +21,7 @@ server/dist/
 
 # Database
 server/prisma/*.db
+!server/prisma/dev.db
 server/prisma/*.db-journal
 
 # Logs
