@@ -383,7 +383,7 @@ export async function getGuardianStatus(req: AuthRequest, res: Response) {
     });
   } catch (err: any) {
     console.error('[GuardianController] Error fetching guardian status:', err);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: 'Internal server error', error: err.message, stack: err.stack });
   }
 }
 
