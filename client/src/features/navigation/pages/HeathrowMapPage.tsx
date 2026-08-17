@@ -977,83 +977,87 @@ export default function HeathrowMapPage() {
 
   const handleNextStep = useCallback(() => {
     const currentIdx = activeStepRef.current;
-    const currentStep = stepsRef.current[currentIdx];
+    
+    // Check both current step and next step for notifications if we are skipping by 2
+    const stepsToCheck = [stepsRef.current[currentIdx], stepsRef.current[currentIdx + 1]].filter(Boolean);
+    
+    stepsToCheck.forEach(currentStep => {
+      if (currentStep) {
+        const instrLower = (currentStep.instruction || '').toLowerCase();
+        const titleLower = (currentStep.title || '').toLowerCase();
+        const cpNameLower = (currentStep.checkpoint?.name || '').toLowerCase();
 
-    if (currentStep) {
-      const instrLower = (currentStep.instruction || '').toLowerCase();
-      const titleLower = (currentStep.title || '').toLowerCase();
-      const cpNameLower = (currentStep.checkpoint?.name || '').toLowerCase();
+        const isSecurity = currentStep.checkpoint?.type === 'security' ||
+                           instrLower.includes('security') ||
+                           titleLower.includes('security') ||
+                           cpNameLower.includes('security');
 
-      const isSecurity = currentStep.checkpoint?.type === 'security' ||
-                         instrLower.includes('security') ||
-                         titleLower.includes('security') ||
-                         cpNameLower.includes('security');
+        const isLuggage  = currentStep.checkpoint?.type === 'luggage' ||
+                           instrLower.includes('luggage') ||
+                           instrLower.includes('baggage') ||
+                           titleLower.includes('luggage') ||
+                           titleLower.includes('baggage') ||
+                           cpNameLower.includes('luggage') ||
+                           cpNameLower.includes('baggage');
 
-      const isLuggage  = currentStep.checkpoint?.type === 'luggage' ||
-                         instrLower.includes('luggage') ||
-                         instrLower.includes('baggage') ||
-                         titleLower.includes('luggage') ||
-                         titleLower.includes('baggage') ||
-                         cpNameLower.includes('luggage') ||
-                         cpNameLower.includes('baggage');
+        const token = localStorage.getItem('token');
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
 
-      const token = localStorage.getItem('token');
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      if (isSecurity && !notifiedCheckpointsRef.current.has('security')) {
-        notifiedCheckpointsRef.current.add('security');
-        fetch('/api/guardian/navigation/security-complete', {
-          method: 'POST',
-          headers,
-        })
-          .then(res => res.json())
-          .then(data => {
-            if (data.success && data.guardianNotified) {
-              setNotificationStatus('✓ Personal Guardian notified via email');
-              setTimeout(() => setNotificationStatus(null), 4000);
-            } else if (data.success && !data.guardianNotified) {
-              console.log('[Navigation] No verified guardian found to notify.');
-            }
+        if (isSecurity && !notifiedCheckpointsRef.current.has('security')) {
+          notifiedCheckpointsRef.current.add('security');
+          fetch('/api/guardian/navigation/security-complete', {
+            method: 'POST',
+            headers,
           })
-          .catch(err => {
-            console.error('Failed to notify guardian for security complete:', err);
-            setNotificationStatus('⚠ Guardian notification could not be sent.');
-            setTimeout(() => setNotificationStatus(null), 4000);
-          });
-      } else if (isLuggage && !notifiedCheckpointsRef.current.has('luggage')) {
-        notifiedCheckpointsRef.current.add('luggage');
-        fetch('/api/guardian/navigation/luggage-complete', {
-          method: 'POST',
-          headers,
-        })
-          .then(res => res.json())
-          .then(data => {
-            if (data.success && data.guardianNotified) {
-              setNotificationStatus('✓ Personal Guardian notified via email');
+            .then(res => res.json())
+            .then(data => {
+              if (data.success && data.guardianNotified) {
+                setNotificationStatus('✓ Personal Guardian notified via email');
+                setTimeout(() => setNotificationStatus(null), 4000);
+              } else if (data.success && !data.guardianNotified) {
+                console.log('[Navigation] No verified guardian found to notify.');
+              }
+            })
+            .catch(err => {
+              console.error('Failed to notify guardian for security complete:', err);
+              setNotificationStatus('⚠ Guardian notification could not be sent.');
               setTimeout(() => setNotificationStatus(null), 4000);
-            } else if (data.success && !data.guardianNotified) {
-              console.log('[Navigation] No verified guardian found to notify.');
-            }
+            });
+        } else if (isLuggage && !notifiedCheckpointsRef.current.has('luggage')) {
+          notifiedCheckpointsRef.current.add('luggage');
+          fetch('/api/guardian/navigation/luggage-complete', {
+            method: 'POST',
+            headers,
           })
-          .catch(err => {
-            console.error('Failed to notify guardian for luggage complete:', err);
-            setNotificationStatus('⚠ Guardian notification could not be sent.');
-            setTimeout(() => setNotificationStatus(null), 4000);
-          });
+            .then(res => res.json())
+            .then(data => {
+              if (data.success && data.guardianNotified) {
+                setNotificationStatus('✓ Personal Guardian notified via email');
+                setTimeout(() => setNotificationStatus(null), 4000);
+              } else if (data.success && !data.guardianNotified) {
+                console.log('[Navigation] No verified guardian found to notify.');
+              }
+            })
+            .catch(err => {
+              console.error('Failed to notify guardian for luggage complete:', err);
+              setNotificationStatus('⚠ Guardian notification could not be sent.');
+              setTimeout(() => setNotificationStatus(null), 4000);
+            });
+        }
       }
-    }
+    });
 
-    // Advance to next step immediately
-    gotoStep(currentIdx + 1);
+    // Advance to next step immediately by 2
+    gotoStep(Math.min(currentIdx + 2, stepsRef.current.length - 1));
   }, [gotoStep]);
 
 
-  const handlePrevStep = useCallback(() => gotoStep(activeStepRef.current - 1), [gotoStep]);
+  const handlePrevStep = useCallback(() => gotoStep(Math.max(activeStepRef.current - 2, 0)), [gotoStep]);
 
   /* ─── Tooltip safe position ───────────────────────────────────────── */
   const getTooltipStyle = () => {
@@ -1320,11 +1324,11 @@ export default function HeathrowMapPage() {
 
         {/* ── Navigation Panel ──────────────────────────────────── */}
         {navMode && (
-          <div className="absolute top-0 left-0 bottom-0 w-80 z-20 flex flex-col shadow-2xl"
+          <div className="absolute bottom-0 left-0 right-0 md:w-[350px] md:top-auto md:bottom-4 md:left-4 z-20 flex flex-col shadow-2xl rounded-t-3xl md:rounded-2xl"
             style={{
               background: 'rgba(10,16,32,0.97)',
               backdropFilter: 'blur(24px)',
-              borderRight: '1px solid rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.08)',
             }}>
 
             {/* Header */}
@@ -1368,29 +1372,12 @@ export default function HeathrowMapPage() {
               )}
             </div>
 
-            {/* Current step hero */}
-            {currentStep && (
-              <div className="mx-3 mt-3 p-3 rounded-xl border border-blue-500/30"
-                style={{ background: 'rgba(41,121,255,0.12)' }}>
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0">
-                    <ActionIcon action={currentStep.action} size={20} />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-white font-semibold text-sm">{currentStep.instruction}</div>
-                    {currentStep.distanceMeters > 0 && (
-                      <div className="text-blue-300 text-xs mt-1">{currentStep.distanceMeters}m</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* All steps list */}
-            <div className="flex-1 overflow-y-auto py-2 px-2" style={{ scrollbarWidth: 'none' }}>
-              {steps.map((step, idx) => {
+            {/* 2 steps list */}
+            <div className="py-2 px-2 flex-none">
+              {steps.slice(activeStep, activeStep + 2).map((step, mappedIdx) => {
+                const idx = activeStep + mappedIdx;
                 const isActive = idx === activeStep;
-                const isPast   = idx < activeStep;
+                const isPast = false;
                 const cp = step.checkpoint;
 
                 /* ── Checkpoint Step Card ── */
@@ -1470,7 +1457,7 @@ export default function HeathrowMapPage() {
                   ← Prev
                 </button>
                 <button onClick={handleNextStep}
-                  disabled={activeStep === steps.length - 1}
+                  disabled={activeStep >= steps.length - 1}
                   className="bg-blue-600 hover:bg-blue-700 disabled:opacity-30 text-white rounded-xl py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2">
                   Next →
                 </button>
